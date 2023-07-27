@@ -21,7 +21,7 @@ export const addUser = async (req, res, next) => {
 
   //   invalid input in the frontend
   if (!name || !password) {
-    res.send(400).json({ message: "name and password are required." });
+    return res.send(400).json({ message: "name and password are required." });
   }
 
   //   check for existing users on the DB
@@ -52,4 +52,26 @@ export const addUser = async (req, res, next) => {
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
+};
+
+// 3. loginUser
+export const loginUser = async (req, res, next) => {
+  const { name, password } = req.body;
+
+  let foundUser;
+  try {
+    foundUser = await User.findOne({ name });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+  if (!foundUser) {
+    return res.status(404).json({ message: "user not found" });
+  }
+
+  //   check if user inputed the right password
+  const pwdMatch = await bcrypt.compare(password, foundUser.password);
+  if (pwdMatch) {
+    return res.status(200).json({ message: "Login SuccessFul" });
+  }
+  return res.status(401).json({ message: "Incorrect Password" });
 };
