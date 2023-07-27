@@ -1,14 +1,13 @@
-import express from "express";
 import dotenv from "dotenv";
+import express from "express";
 import mongoose from "mongoose";
+import router from "./routes/userRoutes";
 
 dotenv.config();
 const app = express();
 
-// app.use("/api/user", userRoutes);
-app.get("/", (req, res, next) => {
-  res.send("Hello world");
-});
+app.use(express.json());
+app.use("/api/user", router);
 
 mongoose
   .connect(process.env.mongoDB_URI)
