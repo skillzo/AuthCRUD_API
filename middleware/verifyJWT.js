@@ -1,1 +1,15 @@
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
+
+export const verifyJwt = (req, res, next) => {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+
+  if (!authHeader?.startsWith("Bearer ")) return res.sendStatus(401); // unauthorized
+  const token = authHeader.split(" ")[1];
+  console.log("vwrify Token here: ", token);
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) return res.sendStatus(403); //fobidden because the token is invalid here
+    req.name = decoded.UserInfo.name;
+    req.roles = decoded.UserInfo.roles;
+    next();
+  });
+};

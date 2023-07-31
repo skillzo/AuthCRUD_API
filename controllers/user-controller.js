@@ -1,5 +1,9 @@
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 import User from "../model/user";
+
+dotenv.config();
 
 // 1.fetch all users
 export const getAllUsers = async (req, res, next) => {
@@ -54,7 +58,7 @@ export const addUser = async (req, res, next) => {
   }
 };
 
-// 3. loginUser
+// 3. loginUser with refresh token added on login
 export const loginUser = async (req, res, next) => {
   const { name, password } = req.body;
 
@@ -70,8 +74,48 @@ export const loginUser = async (req, res, next) => {
 
   //   check if user inputed the right password
   const pwdMatch = await bcrypt.compare(password, foundUser.password);
+
+  // at this point the password match so you issue JWT to the user.
   if (pwdMatch) {
-    return res.status(200).json({ message: "Login SuccessFul" });
+    const roles = Object.values(foundUser.roles).filter(Boolean);
+
+    //create JWTs
+    const accessToken = jwt.sign(
+      {
+        UserInfo: {
+          name: foundUser.name,
+          roles,
+        },
+      },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "10s" },
+    );
+
+    const refreshToken = jwt.sign(
+      { username: foundUser.name },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "1d" },
+    );
+    // save the user object with the refresh token there
+
+    const loginResult = await User.findOneAndUpdate(
+      { name },
+      { refreshToken: refreshToken },
+    );
+
+    console.log(loginResult);
+
+    // secure  the response to the frontend in a sequre HTTPONLY cookie
+
+    res.cookie("jwt", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    return res
+      .status(200)
+      .json({ message: "Login SuccessFul", data: { roles, accessToken } });
   }
   return res.status(401).json({ message: "Incorrect Password" });
 };
